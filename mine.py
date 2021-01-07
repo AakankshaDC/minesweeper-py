@@ -3,6 +3,7 @@ import random
 from math import *
 from time import sleep
 import os
+from itertools import chain
 #31
 
 def gameInstructions(): # set up! 
@@ -215,8 +216,9 @@ def grid(GoldHunt,inputP,name): # set up!
       squares.append(sq)
       sq.draw(GoldHunt)
 
-  # mineIndices = random.sample(range(0, 225), 10)
-  mineIndices = [4, 16, 21, 23, 37]
+  mineIndices = random.sample(range(0, 225), 25)
+  # mineIndices = [4, 16, 21, 23, 37]
+  print(mineIndices)
   mineSquareList = [squares[i] for i in mineIndices]
   sqValues = [0 for i in range(0, 225)] # defaulting each sq value to be blank
   # start setting up mine valus and then calculated adjacent values
@@ -231,6 +233,7 @@ def grid(GoldHunt,inputP,name): # set up!
       distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
       sqValues[i] = sum(d <= 50 for d in distance)
   
+  print(sqValues)
   return squares, sqValues, mineIndices
   
 def isInRectangle(x, y, rect):
@@ -293,29 +296,47 @@ def revealBlockColors(v):
   else:
     return ['grey', 'red']
 
-def bfs(sqmatrix,i,j):
+def bfs(sqmatrix, i, j, squares):
+  print(sqmatrix)
+  print(sqmatrix[i][j])
+  # print(sqmatrix)
+
   stack = [(i,j)] # push the co-ords on the top of the stack
-  sqmatrix[i][j] = 0
-  
+  # sqmatrix[i][j] = 'U' # SHOULD ALREADY BE ZERO CHECK THAT FIRST
+  print(sqmatrix)
+  # BFS IS MESSED UP, ISNT DOING FLOOD FILL, DOING NOW
   while stack:
       vertex = stack.pop() # pop from the top of the stack
       i,j = vertex
-      if j-1>=0 and sqmatrix[i][j-1] == '1':
+      sqmatrix[i][j] = 'V' # V for visited
+      if j-1>=0 and sqmatrix[i][j-1] == 0:
           stack.append((i,j-1))
-          sqmatrix[i][j-1] = '0' # make it 0
+          # sqmatrix[i][j-1] = '0' # make it 0
           
-      if j+1<len(sqmatrix[i]) and sqmatrix[i][j+1] == '1':
+      if j+1<len(sqmatrix[i]) and sqmatrix[i][j+1] == 0:
           stack.append((i,j+1))
-          sqmatrix[i][j+1] = '0' # make it 0
+          # sqmatrix[i][j+1] = '0' # make it 0
           
       # check if the 4 possible neighbors are 1's
-      if i-1>=0 and sqmatrix[i-1][j] == '1':
+      if i-1>=0 and sqmatrix[i-1][j] == 0:
           stack.append((i-1,j))
-          sqmatrix[i-1][j] = '0' # make it 0
+          # sqmatrix[i-1][j] = '0' # make it 0
           
-      if i+1<len(sqmatrix) and sqmatrix[i+1][j] == '1':
+      if i+1<len(sqmatrix) and sqmatrix[i+1][j] == 0:
           stack.append((i+1,j))
-          sqmatrix[i+1][j] = '0' # make it 0
+          # sqmatrix[i+1][j] = '0' # make it 0
+  print(sqmatrix)
+  # display all the flood filled blocks as V
+  # first flatten it
+  flattened_sqValues = list(chain.from_iterable(sqmatrix))
+  for index in range(len(flattened_sqValues)):
+    if flattened_sqValues[index] == 'V':
+      squares[index].setFill('grey')
+
+  # we will need one more loop to open all the cells which are adjacent of the V marked ones
+
+
+  # ONCE FLOOD FILL IS PERFORMED, IT SHOULD FLAT OUT THE LIST AND UPDATE ALL THE VALUES TO IMPLY THAT ALL THE VALUES ARE GEETTING FLOOD FILLED
 
 def main():
   
@@ -358,6 +379,7 @@ def main():
     # Create grid if click new game button
     x1 = 0
     y1 = 0
+    # squares, sqValues, mineIndices = "","",""
     
     if isInRectangle(x, y, newGameButton):
       inputP = player.getText()
@@ -376,6 +398,7 @@ def main():
     
     # If statement if there is a click within the game
     if gameWindowClick != None:
+      print('here????')
       x1 = gameWindowClick.getX()
       y1 = gameWindowClick.getY()
                  
@@ -407,7 +430,14 @@ def main():
               valueText.draw(GoldHunt)
 
           elif sqValues[i] == 0:
-            bfs()
+            print("reached here at least")
+            # need to convert flat list to matrix to identify what i and j are for flood fill
+            sqmatrix = [sqValues[j:j+15] for j in range(0, len(sqValues), 15)] # since it is a 15x15 grid please refer to this link for more details - https://stackoverflow.com/questions/3636344/read-flat-list-into-multidimensional-array-matrix-in-python
+            row_index = i % 15
+            column_index = i // 15
+            bfs(sqmatrix, row_index, column_index, squares)
+            # first ideentify what corordinates they fall in x1 and y1 are mouse coorrdinates and we want indices in which they fall
+          # pass
           # Wait for click
           # GoldHunt.getMouse()
 
