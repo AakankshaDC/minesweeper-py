@@ -220,22 +220,18 @@ def grid(GoldHunt,inputP,name): # fixed for 2d
   mineIndices = []
   excluded = set()
   i = 0
-  while i<55:
+  while i<35:
       x = random.randrange(*(0,15))
       y = random.randrange(*(0,15))
       if (x,y) in excluded: continue
       mineIndices.append((x,y))
       i += 1
-  # mineIndices = random.sample(range(0, 225), 25)
-  # mineIndices = [4, 16, 21, 23, 37]
-  # print(mineIndices)
+
   mineSquareList = [squares[x][y] for x,y in mineIndices]
-  # print(mineSquareList)
   sqValues = [[0 for i in range(15)] for j in range(15)] # defaulting each sq value to be blank
   # start setting up mine valus and then calculated adjacent values
   for x,y in mineIndices:
     sqValues[x][y] = 'X'
-  # print(sqValues)
 
   for i in range(len(squares)):
     for j in range(len(squares[i])):
@@ -249,13 +245,8 @@ def grid(GoldHunt,inputP,name): # fixed for 2d
         if (i-1, j+1) in mineIndices: val += 1
         if (i+1, j-1) in mineIndices: val += 1
         if (i+1, j+1) in mineIndices: val += 1
-        # x1=squares[i][j].getCenter().getX()
-        # y1=squares[i][j].getCenter().getY()
-        # # if the distance of ith sqare is less than or equal to 35 root 2 ~~ 50 from any square thats a mine square then add 1
-        # distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
         sqValues[i][j] = val
   
-  # print(sqValues)
   return squares, sqValues, mineIndices
   
 def isInRectangle(x, y, rect):
@@ -319,36 +310,26 @@ def revealBlockColors(v):
     return ['grey', 'red']
 
 def bfs(sqmatrix, i, j, squares, GoldHunt, score, scoreText):
-  # print(sqmatrix)
-  # print(sqmatrix[i][j])
-  # print(sqmatrix)
   visited_SQMatrix = sqmatrix.copy()
 
   stack = [(i,j)] # push the co-ords on the top of the stack
-  # sqmatrix[i][j] = 'U' # SHOULD ALREADY BE ZERO CHECK THAT FIRST
-  # print(sqmatrix)
-  # BFS IS MESSED UP, ISNT DOING FLOOD FILL, DOING NOW
   while stack:
       vertex = stack.pop() # pop from the top of the stack
       i,j = vertex
       visited_SQMatrix[i][j] = 'V' # V for visited
       if j-1>=0 and sqmatrix[i][j-1] == 0:
           stack.append((i,j-1))
-          # sqmatrix[i][j-1] = '0' # make it 0
           
       if j+1<len(sqmatrix[i]) and sqmatrix[i][j+1] == 0:
           stack.append((i,j+1))
-          # sqmatrix[i][j+1] = '0' # make it 0
           
       # check if the 4 possible neighbors are 1's
       if i-1>=0 and sqmatrix[i-1][j] == 0:
           stack.append((i-1,j))
-          # sqmatrix[i-1][j] = '0' # make it 0
           
       if i+1<len(sqmatrix) and sqmatrix[i+1][j] == 0:
           stack.append((i+1,j))
-          # sqmatrix[i+1][j] = '0' # make it 0
-  print(sqmatrix)
+
   # display all the flood filled blocks as V and fill it with the appropriate color
   for i in range(len(visited_SQMatrix)):
     for j in range(len(visited_SQMatrix[i])):
@@ -356,7 +337,6 @@ def bfs(sqmatrix, i, j, squares, GoldHunt, score, scoreText):
         squares[i][j].setFill('grey')
   
   # we will need one more loop to open all the cells which are adjacent of the V marked ones
-  print('will calculate boundary_cells now!!!')
   boundary_cells = []
   # if there is any visited one with an adjacent that is not marked as V then add it boundary cells
   for row in range(len(visited_SQMatrix)):
@@ -367,21 +347,16 @@ def bfs(sqmatrix, i, j, squares, GoldHunt, score, scoreText):
         if -1 < (col - 1) < 15 and visited_SQMatrix[row][col-1]!='V': boundary_cells.append((row,col-1))
         if -1 < (col + 1) < 15 and visited_SQMatrix[row][col+1]!='V': boundary_cells.append((row,col+1))
  
-  # print(boundary_cells)
-  print('_'*10)
   for x,y in boundary_cells:
     colorList = revealBlockColors(sqmatrix[x][y])
     squares[x][y].setFill(colorList[0])
-    print(sqmatrix[x][y])
     score += sqmatrix[x][y]
     valueText = Text(squares[x][y].getCenter(),str(sqmatrix[x][y]))
     valueText.setSize(20)
     valueText.setFill(colorList[1])
     valueText.draw(GoldHunt)
-    # visited_SQMatrix[i][j] = 'V'
-  print('_'*10)
+  
   # update score
-
   scoreText.undraw() # coz initially it was a string
   messageC = Text(Point(455,20),str(score))
   messageC.setFill("yellow")
@@ -390,9 +365,7 @@ def bfs(sqmatrix, i, j, squares, GoldHunt, score, scoreText):
   return score, messageC
 
 def main():
-  
-  # Call control() function1
-  gameControl, newGameButton, exitButton, player, header = entryWindow()
+  gameControl, newGameButton, exitButton, player, header = entryWindow() # Call control() function
   GoldHunt, messageC, name = window()
   Round = 0
   score = 0
@@ -432,15 +405,12 @@ def main():
     # Create grid if click new game button
     x1 = 0
     y1 = 0
-    # squares, sqValues, mineIndices = "","",""
     
     if isInRectangle(x, y, newGameButton):
       inputP = player.getText()
       if inputP != "": # Only run if there is a name in the name entry box
         # If new game, get rid of old grid
         if new_game == False:
-          # for s in squares:
-          #   s.undraw()
           try:
             score = 0
             for i in range(len(squares)):
@@ -455,13 +425,11 @@ def main():
         # Not a new game    
         new_game = False
         Round = 1
-        # messageR.setText('Round: '+ str(Round))
         # Call grid() function
         squares, sqValues, mineIndices = grid(GoldHunt,inputP,name) # $$
     
     # If statement if there is a click within the game
     if gameWindowClick != None:
-      print('here????')
       x1 = gameWindowClick.getX()
       y1 = gameWindowClick.getY()
                  
@@ -504,12 +472,9 @@ def main():
                 valueText.draw(GoldHunt)
 
             elif sqValues[i][k] == 0:
-              print("reached here at least")
               score, scoreText = bfs(sqValues,i,k, squares, GoldHunt, score, scoreText)
-              print(score)
             else:
               score += sqValues[i][k]
-              print(score)
               scoreText.undraw()
               scoreText = Text(Point(455,20),str(score))
               scoreText.setFill("yellow")
