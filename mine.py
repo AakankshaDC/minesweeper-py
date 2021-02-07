@@ -220,7 +220,7 @@ def grid(GoldHunt,inputP,name): # fixed for 2d
   mineIndices = []
   excluded = set()
   i = 0
-  while i<35:
+  while i<55:
       x = random.randrange(*(0,15))
       y = random.randrange(*(0,15))
       if (x,y) in excluded: continue
@@ -240,11 +240,20 @@ def grid(GoldHunt,inputP,name): # fixed for 2d
   for i in range(len(squares)):
     for j in range(len(squares[i])):
       if (i,j) not in mineIndices:
-        x1=squares[i][j].getCenter().getX()
-        y1=squares[i][j].getCenter().getY()
-        # if the distance of ith sqare is less than or equal to 35 root 2 ~~ 50 from any square thats a mine square then add 1
-        distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
-        sqValues[i][j] = sum(d <= 50 for d in distance)
+        val = 0
+        if (i-1, j) in mineIndices: val += 1
+        if (i+1, j) in mineIndices: val += 1
+        if (i, j-1) in mineIndices: val += 1
+        if (i, j+1) in mineIndices: val += 1
+        if (i-1, j-1) in mineIndices: val += 1
+        if (i-1, j+1) in mineIndices: val += 1
+        if (i+1, j-1) in mineIndices: val += 1
+        if (i+1, j+1) in mineIndices: val += 1
+        # x1=squares[i][j].getCenter().getX()
+        # y1=squares[i][j].getCenter().getY()
+        # # if the distance of ith sqare is less than or equal to 35 root 2 ~~ 50 from any square thats a mine square then add 1
+        # distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
+        sqValues[i][j] = val
   
   # print(sqValues)
   return squares, sqValues, mineIndices
