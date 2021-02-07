@@ -4,6 +4,7 @@ from math import *
 from time import sleep
 import os
 from itertools import chain
+import numbers
 #31
 
 def gameInstructions(): # set up! 
@@ -191,7 +192,7 @@ def window(): # todo
   # messageR.draw(GoldHunt)
 
   # Click Counter
-  messageC = Text(Point(430,20),"Clicks:")
+  messageC = Text(Point(430,20),"Score:")
   messageC.setFill("yellow")
   messageC.draw(GoldHunt)
 
@@ -202,38 +203,50 @@ def window(): # todo
 
   return GoldHunt, messageC, name
 
-def grid(GoldHunt,inputP,name): # set up!
-  squares = []
+def grid(GoldHunt,inputP,name): # fixed for 2d
+  squares = [['' for i in range(15)] for j in range(15)]
   sqValues = []
   name.setText('Player: ' + inputP) # set player name at top of the window
 
-  sqmatrix = [[0 for i in range(15)] for j in range(15)]
+  # sqmatrix = [[0 for i in range(15)] for j in range(15)]
   # Create for loop within for loop for the 15x15 circle grid
   for i in range (15):
     for k in range(15):
       sq = Rectangle(Point(k*32,i*32+40), Point(k*32+35,i*32+40+35))
       sq.setFill('light grey')
-      squares.append(sq)
+      squares[i][k] = sq
       sq.draw(GoldHunt)
 
-  mineIndices = random.sample(range(0, 225), 25)
+  mineIndices = []
+  excluded = set()
+  i = 0
+  while i<35:
+      x = random.randrange(*(0,15))
+      y = random.randrange(*(0,15))
+      if (x,y) in excluded: continue
+      mineIndices.append((x,y))
+      i += 1
+  # mineIndices = random.sample(range(0, 225), 25)
   # mineIndices = [4, 16, 21, 23, 37]
-  print(mineIndices)
-  mineSquareList = [squares[i] for i in mineIndices]
-  sqValues = [0 for i in range(0, 225)] # defaulting each sq value to be blank
+  # print(mineIndices)
+  mineSquareList = [squares[x][y] for x,y in mineIndices]
+  # print(mineSquareList)
+  sqValues = [[0 for i in range(15)] for j in range(15)] # defaulting each sq value to be blank
   # start setting up mine valus and then calculated adjacent values
-  for i in mineIndices:
-    sqValues[i] = 'X'
+  for x,y in mineIndices:
+    sqValues[x][y] = 'X'
+  # print(sqValues)
 
   for i in range(len(squares)):
-    if i not in mineIndices:
-      x1=squares[i].getCenter().getX()
-      y1=squares[i].getCenter().getY()
-      # if the distance of ith sqare is less than or equal to 35 root 2 ~~ 50 from any square thats a mine square then add 1
-      distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
-      sqValues[i] = sum(d <= 50 for d in distance)
+    for j in range(len(squares[i])):
+      if (i,j) not in mineIndices:
+        x1=squares[i][j].getCenter().getX()
+        y1=squares[i][j].getCenter().getY()
+        # if the distance of ith sqare is less than or equal to 35 root 2 ~~ 50 from any square thats a mine square then add 1
+        distance = [round(sqrt((x1 - m.getCenter().getX())**2 + (y1 - m.getCenter().getY())**2), 2) for m in mineSquareList]
+        sqValues[i][j] = sum(d <= 50 for d in distance)
   
-  print(sqValues)
+  # print(sqValues)
   return squares, sqValues, mineIndices
   
 def isInRectangle(x, y, rect):
@@ -296,19 +309,20 @@ def revealBlockColors(v):
   else:
     return ['grey', 'red']
 
-def bfs(sqmatrix, i, j, squares):
-  print(sqmatrix)
-  print(sqmatrix[i][j])
+def bfs(sqmatrix, i, j, squares, GoldHunt, score, scoreText):
   # print(sqmatrix)
+  # print(sqmatrix[i][j])
+  # print(sqmatrix)
+  visited_SQMatrix = sqmatrix.copy()
 
   stack = [(i,j)] # push the co-ords on the top of the stack
   # sqmatrix[i][j] = 'U' # SHOULD ALREADY BE ZERO CHECK THAT FIRST
-  print(sqmatrix)
+  # print(sqmatrix)
   # BFS IS MESSED UP, ISNT DOING FLOOD FILL, DOING NOW
   while stack:
       vertex = stack.pop() # pop from the top of the stack
       i,j = vertex
-      sqmatrix[i][j] = 'V' # V for visited
+      visited_SQMatrix[i][j] = 'V' # V for visited
       if j-1>=0 and sqmatrix[i][j-1] == 0:
           stack.append((i,j-1))
           # sqmatrix[i][j-1] = '0' # make it 0
@@ -326,17 +340,45 @@ def bfs(sqmatrix, i, j, squares):
           stack.append((i+1,j))
           # sqmatrix[i+1][j] = '0' # make it 0
   print(sqmatrix)
-  # display all the flood filled blocks as V
-  # first flatten it
-  flattened_sqValues = list(chain.from_iterable(sqmatrix))
-  for index in range(len(flattened_sqValues)):
-    if flattened_sqValues[index] == 'V':
-      squares[index].setFill('grey')
-
+  # display all the flood filled blocks as V and fill it with the appropriate color
+  for i in range(len(visited_SQMatrix)):
+    for j in range(len(visited_SQMatrix[i])):
+      if visited_SQMatrix[i][j] == 'V':
+        squares[i][j].setFill('grey')
+  
   # we will need one more loop to open all the cells which are adjacent of the V marked ones
+  print('will calculate boundary_cells now!!!')
+  boundary_cells = []
+  # if there is any visited one with an adjacent that is not marked as V then add it boundary cells
+  for row in range(len(visited_SQMatrix)):
+    for col in range(len(visited_SQMatrix[row])):
+      if visited_SQMatrix[row][col] == 'V':
+        if -1 < (row - 1) < 15 and visited_SQMatrix[row-1][col]!='V': boundary_cells.append((row-1,col))
+        if -1 < (row + 1) < 15 and visited_SQMatrix[row+1][col]!='V': boundary_cells.append((row+1,col))
+        if -1 < (col - 1) < 15 and visited_SQMatrix[row][col-1]!='V': boundary_cells.append((row,col-1))
+        if -1 < (col + 1) < 15 and visited_SQMatrix[row][col+1]!='V': boundary_cells.append((row,col+1))
+ 
+  # print(boundary_cells)
+  print('_'*10)
+  for x,y in boundary_cells:
+    colorList = revealBlockColors(sqmatrix[x][y])
+    squares[x][y].setFill(colorList[0])
+    print(sqmatrix[x][y])
+    score += sqmatrix[x][y]
+    valueText = Text(squares[x][y].getCenter(),str(sqmatrix[x][y]))
+    valueText.setSize(20)
+    valueText.setFill(colorList[1])
+    valueText.draw(GoldHunt)
+    # visited_SQMatrix[i][j] = 'V'
+  print('_'*10)
+  # update score
 
+  scoreText.undraw() # coz initially it was a string
+  messageC = Text(Point(455,20),str(score))
+  messageC.setFill("yellow")
+  messageC.draw(GoldHunt)
 
-  # ONCE FLOOD FILL IS PERFORMED, IT SHOULD FLAT OUT THE LIST AND UPDATE ALL THE VALUES TO IMPLY THAT ALL THE VALUES ARE GEETTING FLOOD FILLED
+  return score, messageC
 
 def main():
   
@@ -344,9 +386,11 @@ def main():
   gameControl, newGameButton, exitButton, player, header = entryWindow()
   GoldHunt, messageC, name = window()
   Round = 0
-  click_g = 0
+  score = 0
   new_game = True
-  
+  scoreText = Text(Point(455,20),'0')
+  scoreText.setFill("yellow")
+  scoreText.draw(GoldHunt)
   # val = falsee, at thee end check if clicked on that smile face adn maake val to true if clicked and while true in here
   continueGame = True
   while continueGame:
@@ -386,11 +430,21 @@ def main():
       if inputP != "": # Only run if there is a name in the name entry box
         # If new game, get rid of old grid
         if new_game == False:
-          for s in squares:
-            s.undraw()
+          # for s in squares:
+          #   s.undraw()
+          try:
+            score = 0
+            for i in range(len(squares)):
+              for j in range(len(squares[i])):
+                squares[i][j].undraw()
+                scoreText.undraw()
+                scoreText = Text(Point(455,20),'0')
+                scoreText.setFill("yellow")
+                scoreText.draw(GoldHunt)
+          except:
+            pass
         # Not a new game    
         new_game = False
-        # click_g = 0
         Round = 1
         # messageR.setText('Round: '+ str(Round))
         # Call grid() function
@@ -402,98 +456,54 @@ def main():
       x1 = gameWindowClick.getX()
       y1 = gameWindowClick.getY()
                  
+      if isInRectangle(x, y, exitButton):
+        result, win2 = closeGame()
+        if result == 'YES':
+          gameControl.close()
+          GoldHunt.close()
+          win2.close()
+          break
+        elif result == 'NO':
+          win2.close()
+
       # loop to run through list of squares to find square clicked
       for i in range(len(squares)):
-        # deal with it based on what value it holds ####
-        # if i is a mineIndex reveal all mines and say game over
-        # else
-          # if val is 0 then #islands -> flood fill -> bfs list of list
+        for k in range(len(squares[i])):
+          # deal with it based on what value it holds ####
+          # if i is a mineIndex reveal all mines and say game over
+          # else
+            # if val is 0 then #islands -> flood fill -> bfs list of list
 
-        if isInRectangle(x1, y1, squares[i]):
-          # When it finds the square, change the block to the hidden color and txt
-          # it is thee ith square, so use ith sqValues forr color and text: ~~
-          colorList = revealBlockColors(sqValues[i])
-          squares[i].setFill(colorList[0])
-          valueText = Text(squares[i].getCenter(),str(sqValues[i]))
-          valueText.setSize(20)
-          valueText.setFill(colorList[1])
-          valueText.draw(GoldHunt)
+          if isInRectangle(x1, y1, squares[i][k]):
+            # When it finds the square, change the block to the hidden color and txt
+            # it is thee ith square, so use ith sqValues forr color and text: ~~
+            colorList = revealBlockColors(sqValues[i][k])
+            squares[i][k].setFill(colorList[0])
+            valueText = Text(squares[i][k].getCenter(),str(sqValues[i][k]))
+            valueText.setSize(20)
+            valueText.setFill(colorList[1])
+            valueText.draw(GoldHunt)
 
-          if sqValues[i] == 'X':
-            # reeveal all mines
-            for j in mineIndices:
-              colorList = revealBlockColors(sqValues[j])
-              squares[j].setFill(colorList[0])
-              valueText = Text(squares[j].getCenter(),str(sqValues[j]))
-              valueText.setSize(20)
-              valueText.setFill(colorList[1])
-              valueText.draw(GoldHunt)
+            if sqValues[i][k] == 'X':
+              # reeveal all mines
+              for mx,my in mineIndices:
+                colorList = revealBlockColors(sqValues[mx][my])
+                squares[mx][my].setFill(colorList[0])
+                valueText = Text(squares[mx][my].getCenter(),str(sqValues[mx][my]))
+                valueText.setSize(20)
+                valueText.setFill(colorList[1])
+                valueText.draw(GoldHunt)
 
-          elif sqValues[i] == 0:
-            print("reached here at least")
-            # need to convert flat list to matrix to identify what i and j are for flood fill
-            sqmatrix = [sqValues[j:j+15] for j in range(0, len(sqValues), 15)] # since it is a 15x15 grid please refer to this link for more details - https://stackoverflow.com/questions/3636344/read-flat-list-into-multidimensional-array-matrix-in-python
-            row_index = i % 15
-            column_index = i // 15
-            bfs(sqmatrix, row_index, column_index, squares)
-            # first ideentify what corordinates they fall in x1 and y1 are mouse coorrdinates and we want indices in which they fall
-          # pass
-          # Wait for click
-          # GoldHunt.getMouse()
-
-          # # After grid is moved, show end message
-          # gold_circle.undraw()
-          # messageB = Text(Point(240,260),"You Win!")
-          # messageB.setSize(20)
-          # messageB.draw(GoldHunt)
-          # exitMessage = Text(Point(240,300),"Click here to continue")
-          # exitMessage.draw(GoldHunt)
-
-          # messageB.undraw()
-          # exitMessage.undraw()
-
-          # # Once Round = 5, end game
-          # if Round == 5:
-          #   if os.path.exists("scores.txt"):
-          #     # Create scores.txt file to save scores of players
-          #     scoresFile = open("scores.txt", "a+")
-          #     scoresFile.write(inputP+ "," + str(click_g)+"\n")
-          #     scoresFile.close()
-          #     # Open file again, but to read this time
-          #     scoresFile = open("scores.txt","r+")
-          #     contents = scoresFile.readlines()
-          #     myList = []
-          #     # Create list from file
-          #     for i in range(len(contents)):
-          #       myList.append(contents[i].rstrip('\n').split(','))
-          #     reverse_lst = []
-          #     # Use for loop to create reverse list and make score element an int
-          #     for i in range(len(myList)):
-          #       myList[i].reverse()
-          #       reverse_lst.append(myList[i])
-          #       reverse_lst[i][0] = int(reverse_lst[i][0])
-          #     # Sort list based of off score element
-          #     myList1 = sorted(reverse_lst)
-          #     # Delete old elements in scores.txt
-          #     scoresFile.truncate(0)
-          #     scoresFile.close()
-
-          #     # Open list to edit again
-          #     scoresFile = open("scores.txt",'a+')
-          #     # Write elemenets of ordered list into scores.txt with name first and score second, separated by ","
-          #     for i in myList1:
-          #       scoresFile.write(str(i[1])+","+str(i[0])+"\n")
-          #     scoresFile.close()
-          #     break
-          #   else:
-          #     # If file doesn't exist, create file
-          #     scoresFile = open("scores.txt","w+")
-          #     scoresFile.write(inputP+ "," + str(click_g)+"\n")
-          #     scoresFile.close()
-          #     break
-          # # Continue performing game and count rounds
-          # circles,color,gold_circle,red_circle = grid(GoldHunt,inputP,name)
-          # Round += 1
-            # messageR.setText('Round: '+ str(Round))
-
+            elif sqValues[i][k] == 0:
+              print("reached here at least")
+              score, scoreText = bfs(sqValues,i,k, squares, GoldHunt, score, scoreText)
+              print(score)
+            else:
+              score += sqValues[i][k]
+              print(score)
+              scoreText.undraw()
+              scoreText = Text(Point(455,20),str(score))
+              scoreText.setFill("yellow")
+              scoreText.draw(GoldHunt)
+      
 main()
